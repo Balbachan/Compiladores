@@ -5,6 +5,7 @@
 
 #define BUFFER_SIZE 15
 
+// MARK: TOKENS
 enum TOKEN {
     // Palavras reservadas
     TOKEN_PROGRAM = 0,
@@ -31,18 +32,26 @@ enum TOKEN {
     TOKEN_FECHA_PARENTESES = 19,
 
     // operadores
-    TOKEN_MAIOR = 20,
-    TOKEN_MENOR = 21,
-    TOKEN_MULT = 22,
-    TOKEN_DIV = 23,
-    TOKEN_ADD = 24,
-    TOKEN_MENOS = 25,
+    TOKEN_MAIOR = 20,           // >
+    TOKEN_MENOR = 21,           // <
+    TOKEN_MULT = 22,            // *
+    TOKEN_DIV = 23,             // /
+    TOKEN_ADD = 24,             // +
+    TOKEN_MENOS = 25,           // -
+    TOKEN_MENOR_IGUAL = 26,     // <=
+    TOKEN_DIV_IGUAL = 27,       // /=
+    TOKEN_MAIOR_IGUAL = 28,     // >=
+    TOKEN_IGUAL = 29,           // =
+    TOKEN_VIRGULA = 30,         // ,
+    TOKEN_DOIS_PONTOS = 31,     // :  
+    TOKEN_PONTO_VIRGULA = 32,   // ;
+    TOKEN_PONTO = 33,           // .
 
     // uuuhhhh
-    TOKEN_IDENTIFICADOR = 26,
+    TOKEN_IDENTIFICADOR = 34,
 
     // comentários
-    TOKEN_COMENTARIO = 27,
+    TOKEN_COMENTARIO = 35,
 
     TOKEN_ERRO = -1
 };
@@ -59,7 +68,7 @@ enum ERRO_COMPILADOR {
 // Não está sendo utilizada
 struct Token {
     enum TOKEN token;
-
+    
 };
 
 // Variáveis globais
@@ -71,8 +80,41 @@ int posicoes_em_tokens[100] = {0};
 int linha = 1;
 
 enum ERRO_COMPILADOR estado_compilador = NORMAL;
+enum TOKEN lookahead; 
 
+// Funções do Léxico
+void emptyBuffer();
+void printBuffer();
+void printBufferAsArray();
+void printTokens();
+enum TOKEN recognize_identificador(const char *str);
+enum TOKEN recognize_token(const char *str);
+void check_compiler_state();
+void eatNextChar(const char c, FILE *arquivo);
 
+// Funções do Sintático
+void consome(enum TOKEN token);
+void programa();
+void bloco();
+void declaracao_de_variaveis();
+void tipo();
+void lista_variavel();
+void comando_composto();
+void comando();
+void comando_atribuicao();
+void comando_condicional();
+void comando_repeticao();
+void comando_entrada();
+void comando_saida();
+void expressao();
+void expressao_logica();
+void expressao_relacional();
+void op_relacional();
+void expressao_simples();
+void termo();
+void fator();
+
+// LÉXICO
 const char* token_para_string(enum TOKEN token) {
     switch (token) {
         case TOKEN_ERRO:
@@ -133,6 +175,22 @@ const char* token_para_string(enum TOKEN token) {
             return "ADD";
         case TOKEN_MENOS:
             return "MENOS";
+        case TOKEN_MENOR_IGUAL:
+            return "MENOR_IGUAL";
+        case TOKEN_DIV_IGUAL:
+            return "TOKEN_DIV_IGUAL";
+        case TOKEN_MAIOR_IGUAL:
+            return "TOKEN_MAIOR_IGUAL";
+        case TOKEN_IGUAL:
+             return "TOKEN_IGUAL";
+        case TOKEN_VIRGULA:
+            return "TOKEN_VIRGULA";
+        case TOKEN_DOIS_PONTOS:
+            return "TOKEN_DOIS_PONTOS";
+        case TOKEN_PONTO_VIRGULA:
+            return "TOKEN_PONTO_VIRGULA";
+        case TOKEN_PONTO:
+            return "TOKEN_PONTO";
 
         default:
             printf("token_num: %d", token);
@@ -239,10 +297,25 @@ enum TOKEN recognize_token(const char *str) {
         return TOKEN_MULT;
     } else if (strcmp(str, "/") == 0) {
         return TOKEN_DIV;
-    }
+    } else if (strcmp(str, "<=") == 0) {
+        return TOKEN_MENOR_IGUAL;
+    } else if (strcmp(str, "/=") == 0) {
+        return TOKEN_DIV_IGUAL;
+    } else if (strcmp(str, ">=") == 0) {
+        return TOKEN_MAIOR_IGUAL;
+    } else if (strcmp(str, "=") == 0) {
+        return TOKEN_IGUAL;
+    } else if (strcmp(str, ",") == 0) {
+        return TOKEN_VIRGULA;
+    } else if (strcmp(str, ":") == 0) {
+        return TOKEN_DOIS_PONTOS; 
+    } else if (strcmp(str, ";") == 0) {
+        return TOKEN_PONTO_VIRGULA; 
+    } else if (strcmp(str, ".") == 0) {
+        return TOKEN_PONTO;       
 
     // TODO: Verificação de identificadores
-    else if (islower(str[0])) {
+    } else if (islower(str[0])) {
         return recognize_identificador(str);
     }
      
@@ -255,18 +328,18 @@ void check_compiler_state() {
     switch (estado_compilador) {
     case NORMAL:
         break;
-    case ERRO_NAO_FECHOU_PARENTESES:
-        printf("Erro na linha %d: ')' esperado", linha);
-        exit(1);
+    // case ERRO_NAO_FECHOU_PARENTESES:
+    //     printf("Erro na linha %d: ')' esperado", linha);
+    //     exit(1);
     case ERRO_GENERICO:
-        printf("Erro generico encontrado, encerrando o programa...");
-        exit(1);
+        // printf("Erro generico encontrado, encerrando o programa...");
+        // printf("erro sintatico: esperado [%c] encontrado[%c], linha [%d] \n", token, lookahead, linha);
+        // exit(1);
     default:
-        printf("Não faço ideia kkkkkkk");
+        printf("Não faço ideia kkkkkkk"); 
         exit(1);
     }
 }
-
 
 void eatNextChar(const char c, FILE *arquivo) {
     static int inside_multiline_comment = 0;
@@ -280,9 +353,10 @@ void eatNextChar(const char c, FILE *arquivo) {
     if ((c == ' ' || c == ';' || c == '\n' || c == '(' || c == ')' || c == '[' || c == ']' || c == '.' || c == ',' || c == ':') && (posicao_atual != 0)) {
         enum TOKEN token = recognize_token(buffer);
         if (token == -1) { // token_erro
-            printf("Erro encontrado na linha %d", linha);
+            // printf("Erro encontrado na linha %d", linha);
             // Parar o programa
-            check_compiler_state();
+            // check_compiler_state();
+            printf("erro sintatico: esperado [%c] encontrado[%c], linha [%d] \n", token, lookahead, linha);
             exit(1);
         }
         printf("Token na linha %d: %s\n", linha, token_para_string(token));
@@ -296,7 +370,7 @@ void eatNextChar(const char c, FILE *arquivo) {
         posicoes_em_tokens[linha]++;
         printf("Token na linha %d: %s\n", linha, token_para_string(token));
         emptyBuffer();
-        estado_compilador = ERRO_NAO_FECHOU_PARENTESES; // vai para estado de erro até encontrar outro parênteses
+        // estado_compilador = ERRO_NAO_FECHOU_PARENTESES; // vai para estado de erro até encontrar outro parênteses
     }
     if (c == ')') {
         enum TOKEN token = TOKEN_FECHA_PARENTESES;
@@ -358,6 +432,7 @@ void eatNextChar(const char c, FILE *arquivo) {
                 }
 
                 // te amo laura <3
+                // te amo paulo <3
             }
 
         } else {
@@ -370,14 +445,197 @@ void eatNextChar(const char c, FILE *arquivo) {
         linha++;
     }
 
-    
+
 
     if (posicao_atual < BUFFER_SIZE && c != ' ' && c != ';' && c != '\n' && c != '(' && c != ')' && can_go_into_buffer) {
         buffer[posicao_atual++] = c;
     }
 }
 
+// MARK: SINTÁTICO 
+void consome(enum TOKEN token) {
+    if (lookahead == token) {
+        lookahead = recognize_token(buffer); 
+    } else {
+        // check_compiler_state(); // vê o erro e exita se necessário
+        printf("a");
+        exit(1);
+    }
+}
+void programa() {
+    consome(TOKEN_PROGRAM);
+    consome(TOKEN_IDENTIFICADOR);
+    consome(TOKEN_PONTO_VIRGULA);
+    bloco();
+    consome(TOKEN_PONTO);
+}
 
+void bloco() {
+    declaracao_de_variaveis();
+    comando_composto();
+}
+
+void declaracao_de_variaveis() {
+    tipo();
+    lista_variavel();
+    consome(TOKEN_PONTO_VIRGULA);
+}
+
+void tipo() {
+    if(lookahead == TOKEN_INTEGER) {
+        consome(TOKEN_IF);
+    } 
+    else if(lookahead == TOKEN_BOOLEAN) {
+        consome(TOKEN_BOOLEAN);
+    }
+}
+
+void lista_variavel() {
+    consome(TOKEN_IDENTIFICADOR);
+    while(lookahead == TOKEN_VIRGULA) {
+        consome(TOKEN_VIRGULA);
+        consome(TOKEN_IDENTIFICADOR);
+    }
+}
+
+void comando_composto() {
+    consome(TOKEN_BEGIN);
+    comando();
+    while(lookahead == TOKEN_PONTO_VIRGULA) {
+        consome(TOKEN_PONTO_VIRGULA);
+        comando();
+    }
+    consome(TOKEN_END);
+}
+
+void comando() {
+    comando_atribuicao();
+    comando_condicional();
+    comando_repeticao();
+    comando_entrada();
+    comando_saida();
+    comando_composto();
+}
+
+void comando_atribuicao() {
+    consome(TOKEN_SET);
+    consome(TOKEN_IDENTIFICADOR);
+    consome(TOKEN_TO);
+    expressao();
+}
+
+void comando_condicional() {
+    consome(TOKEN_IF);
+    expressao();
+    consome(TOKEN_DOIS_PONTOS);
+    comando();
+    if(lookahead == TOKEN_ELIF) {
+        comando();
+    }
+}
+
+void comando_repeticao() {
+    consome(TOKEN_FOR);
+    consome(TOKEN_IDENTIFICADOR);
+    consome(TOKEN_OF);
+    expressao();
+    consome(TOKEN_TO);
+    expressao();
+    consome(TOKEN_DOIS_PONTOS);
+}
+
+void comando_entrada() {
+    consome(TOKEN_READ);
+    consome(TOKEN_ABRE_PARENTESES);
+    lista_variavel();
+    consome(TOKEN_FECHA_PARENTESES);
+}
+
+void comando_saida() {
+    consome(TOKEN_WRITE); // isso aqui também
+    consome(TOKEN_ABRE_PARENTESES);
+    expressao();
+    while(lookahead == TOKEN_VIRGULA) { // conferir isso aqui 
+        consome(TOKEN_VIRGULA);
+        expressao();
+    }
+    consome(TOKEN_FECHA_PARENTESES);
+}
+
+void expressao() {
+    expressao_logica();
+    while(lookahead == TOKEN_OR) {
+        consome(TOKEN_OR);
+        expressao_logica();
+    }
+}
+
+void expressao_logica() {
+    expressao_relacional();
+    while(lookahead == TOKEN_AND) {
+        consome(TOKEN_AND);
+        expressao_relacional();
+    }
+}
+
+void expressao_relacional() {
+    expressao_simples();
+    if (lookahead == TOKEN_MENOR || lookahead == TOKEN_MENOR_IGUAL || lookahead == TOKEN_IGUAL || lookahead == TOKEN_MAIOR || lookahead == TOKEN_MAIOR_IGUAL) {
+        op_relacional();
+        expressao_simples();
+    }
+}
+
+void op_relacional() {
+    if(lookahead == TOKEN_MENOR) {
+        consome(TOKEN_MENOR);
+    } 
+    else if(lookahead == TOKEN_MENOR_IGUAL) {
+        consome(TOKEN_MENOR_IGUAL);
+    }
+    else if(lookahead == TOKEN_IGUAL) {
+        consome(TOKEN_IGUAL);
+    }
+    else if(lookahead == TOKEN_MAIOR) {
+        consome(TOKEN_MAIOR);
+    }
+    else if(lookahead == TOKEN_MAIOR_IGUAL) {
+        consome(TOKEN_MAIOR_IGUAL);
+    }
+}
+
+void expressao_simples() {
+    termo();
+    while(lookahead == TOKEN_ADD || lookahead == TOKEN_MENOS){
+        consome(lookahead);
+    }
+    termo();
+}
+
+void termo() {
+    fator();
+    while(lookahead == TOKEN_MULT || lookahead == TOKEN_DIV) {
+        consome(lookahead);
+    }
+    fator();
+}
+
+void fator() {
+    if(lookahead == TOKEN_IDENTIFICADOR || isdigit(lookahead) || lookahead == TOKEN_TRUE || lookahead == TOKEN_FALSE) {
+        consome(lookahead);
+    } 
+    else if(lookahead == TOKEN_NOT) { //?????? isso parece estar muito errado 
+        fator();
+    }
+    else {
+        consome(TOKEN_ABRE_PARENTESES);
+        expressao();
+        consome(TOKEN_FECHA_PARENTESES);
+    }
+}
+
+
+// MARK: MAIN
 int main(int argc, char *argv[]) {
     FILE* arquivo;
     int caractere;
@@ -397,36 +655,29 @@ int main(int argc, char *argv[]) {
     }
 
     while ((caractere = fgetc(arquivo)) != EOF) {
-
         eatNextChar(caractere, arquivo);
 
         printBufferAsArray();
-
 
         printf("Caractere: ");
         putchar(caractere);
         printf("\n");
     }
-
-
+    
     // int i = 0;
-
     // while (i < bufferSize) {
     //     buffer[i] = "a";
     //     i++;
     // }
-
-
-
     // printBuffer();
-
     // emptyBuffer();
-
     // printBuffer();
 
     printBufferAsArray();
-
     printTokens();
-
+    programa();
+    fclose(arquivo);
+    // programa();
+    
     return 0;
 }
