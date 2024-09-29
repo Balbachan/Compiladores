@@ -52,6 +52,7 @@ enum TOKEN {
 
     // comentários
     TOKEN_COMENTARIO = 35,
+    TOKEN_EOS = 36,
 
     TOKEN_ERRO = -1
 };
@@ -119,6 +120,8 @@ const char* token_para_string(enum TOKEN token) {
     switch (token) {
         case TOKEN_ERRO:
             return "ERRO";
+        case TOKEN_EOS:
+            return "EOS";
         case TOKEN_PROGRAM:
             return "PROGRAM";
         case TOKEN_BEGIN:
@@ -343,22 +346,23 @@ void check_compiler_state() {
 
 void eatNextChar(const char c, FILE *arquivo) {
     static int inside_multiline_comment = 0;
-
     int can_go_into_buffer = 1;  // usado no '{' dos comentários e no ',' rs
+    enum TOKEN token = TOKEN_ERRO;
 
     /*
         Todos esses 'c == X' são os caracteres que eu estou utilizando como delimitadores de palavra -> recognize_token(buffer)
         Eles estão sendo checados depois
     */
+
     if ((c == ' ' || c == ';' || c == '\n' || c == '(' || c == ')' || c == '[' || c == ']' || c == '.' || c == ',' || c == ':') && (posicao_atual != 0)) {
         enum TOKEN token = recognize_token(buffer);
-        if (token == -1) { // token_erro
-            // printf("Erro encontrado na linha %d", linha);
-            // Parar o programa
-            // check_compiler_state();
-            printf("erro sintatico: esperado [%c] encontrado[%c], linha [%d] \n", token, lookahead, linha);
-            exit(1);
-        }
+        // if (token == -1) { // token_erro
+        //     // printf("Erro encontrado na linha %d", linha);
+        //     // Parar o programa
+        //     // check_compiler_state();
+        //     printf("erro sintatico: esperado [%c] encontrado[%c], linha [%d] \n", token, lookahead, linha);
+        //     exit(1);
+        // }
         printf("Token na linha %d: %s\n", linha, token_para_string(token));
         tokens[linha][posicoes_em_tokens[linha]] = token;
         posicoes_em_tokens[linha]++;
@@ -445,8 +449,6 @@ void eatNextChar(const char c, FILE *arquivo) {
         linha++;
     }
 
-
-
     if (posicao_atual < BUFFER_SIZE && c != ' ' && c != ';' && c != '\n' && c != '(' && c != ')' && can_go_into_buffer) {
         buffer[posicao_atual++] = c;
     }
@@ -458,7 +460,7 @@ void consome(enum TOKEN token) {
         lookahead = recognize_token(buffer); 
     } else {
         // check_compiler_state(); // vê o erro e exita se necessário
-        printf("a");
+        printf("erro sintatico: esperado [%c] encontrado[%c], linha [%d] \n", token, lookahead, linha);
         exit(1);
     }
 }
